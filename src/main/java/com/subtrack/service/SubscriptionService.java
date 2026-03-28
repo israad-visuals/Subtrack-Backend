@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.subtrack.dto.DashboardResponse;
 @Service
 @RequiredArgsConstructor
 public class SubscriptionService {
@@ -175,5 +176,49 @@ public class SubscriptionService {
             }
         }
         return total.setScale(2, RoundingMode.HALF_UP);
+    }
+    public DashboardResponse getDashboardSummary(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException(
+                        "User not found"));
+
+        List<Subscription> active =
+                subscriptionRepository
+                        .findByUserIdAndIsActiveTrue(userId);
+
+        List<Subscription> cancelled =
+                subscriptionRepository
+                        .findByUserIdAndIsActiveFalse(userId);
+
+        BigDecimal burnRate =
+                calculateMonthlyBurnRate(userId);
+
+        int trialCount = (int) active.stream()
+                .filter(Subscription::getIsTrial)
+                .count();
+
+        LocalDate today = LocalDate.now();
+        LocalDate weekFromNow = today.plusDays(7);
+        int dueThisWeek = (int) active.stream()
+                .filter(sub -> !sub.getIsTrial())
+                .filter(sub ->
+                        !sub.getNextBillingDate()
+                                .isAfter(weekFromNow)
+                                && !sub.getNextBillingDate()
+                                .isBefore(today))
+                .count();
+
+        BigDecimal savedAmount = cancelled.stream()
+                .map(Subscription::getCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return DashboardResponse.builder()
+                .monthlyBurnRate(burnRate)
+                .activeSubscriptionCount(active.size())
+                .freeTrialCount(trialCount)
+                .paymentsDueThisWeek(dueThisWeek)
+                .savedFromCancelled(savedAmount)
+                .userName(user.getFirstName())
+                .build();
     }
 }
