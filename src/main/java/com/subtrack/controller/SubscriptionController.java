@@ -60,4 +60,11 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptionService
                 .getCancelledSubscriptions(userId));
     }
+    @GetMapping("/{userId}/category/{category}")
+    public ResponseEntity<List<SubscriptionResponse>> getByCategory(
+            @PathVariable Long userId,
+            @PathVariable String category) {
+        return ResponseEntity.ok(subscriptionService
+                .getSubscriptionsByCategory(userId, category));
+    }
 }

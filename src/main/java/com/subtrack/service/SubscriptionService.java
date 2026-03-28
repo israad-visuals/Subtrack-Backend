@@ -228,4 +228,13 @@ public class SubscriptionService {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
+    public List<SubscriptionResponse> getSubscriptionsByCategory(
+            Long userId, String category) {
+        return subscriptionRepository
+                .findByUserIdAndCategory(userId, category)
+                .stream()
+                .peek(sub -> sub.setStatus(calculateStatus(sub)))
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
 }
