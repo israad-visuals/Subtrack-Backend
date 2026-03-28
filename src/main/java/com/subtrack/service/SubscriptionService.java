@@ -221,4 +221,11 @@ public class SubscriptionService {
                 .userName(user.getFirstName())
                 .build();
     }
+    public List<SubscriptionResponse> getCancelledSubscriptions(Long userId) {
+        return subscriptionRepository
+                .findByUserIdAndIsActiveFalse(userId)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
 }

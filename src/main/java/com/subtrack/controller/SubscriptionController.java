@@ -54,4 +54,10 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptionService
                 .cancelSubscription(subscriptionId));
     }
+    @GetMapping("/{userId}/cancelled")
+    public ResponseEntity<List<SubscriptionResponse>> getCancelled(
+            @PathVariable Long userId) {
+        return ResponseEntity.ok(subscriptionService
+                .getCancelledSubscriptions(userId));
+    }
 }
