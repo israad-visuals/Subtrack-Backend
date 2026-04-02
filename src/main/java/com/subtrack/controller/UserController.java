@@ -7,6 +7,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import com.subtrack.repository.PasswordResetTokenRepository;
+import com.subtrack.repository.SubscriptionRepository;
+import jakarta.transaction.Transactional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -15,6 +19,8 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SubscriptionRepository subscriptionRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @GetMapping("/{userId}")
     public ResponseEntity<?> getProfile(
@@ -75,5 +81,25 @@ public class UserController {
                         "lastName", user.getLastName(),
                         "email", user.getEmail()
                 ));
+    }
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Map<String, String>> deleteAccount(@PathVariable Long id) {
+        return userRepository.findById(id)
+                .map(user -> {
+                    // Delete all user's subscriptions
+                    subscriptionRepository.deleteAllByUserId(id);
+
+                    // Delete any password reset tokens
+                    passwordResetTokenRepository.deleteByEmail(user.getEmail());
+
+                    // Delete the user
+                    userRepository.delete(user);
+
+                    return ResponseEntity.ok(Map.of(
+                            "message", "Account and all associated data have been permanently deleted"
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

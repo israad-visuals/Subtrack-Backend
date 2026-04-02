@@ -15,4 +15,6 @@ public interface SubscriptionRepository
     List<Subscription> findByNextBillingDateBetween(
             LocalDate start, LocalDate end);
     List<Subscription> findByUserIdAndIsTrialTrue(Long userId);
+
+    void deleteAllByUserId(Long userId);
 }
