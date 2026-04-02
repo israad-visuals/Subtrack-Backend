@@ -1,18 +1,20 @@
 package com.subtrack.controller;
 
 import com.subtrack.dto.UpdateProfileRequest;
+import com.subtrack.dto.ChangePasswordRequest;
 import com.subtrack.model.User;
 import com.subtrack.repository.UserRepository;
+import com.subtrack.repository.PasswordResetTokenRepository;
+import com.subtrack.repository.SubscriptionRepository;
+import com.subtrack.service.EmailService;
+import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import com.subtrack.repository.PasswordResetTokenRepository;
-import com.subtrack.repository.SubscriptionRepository;
-import jakarta.transaction.Transactional;
+
 import java.util.Map;
-import com.subtrack.dto.ChangePasswordRequest;
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
@@ -23,6 +25,7 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final SubscriptionRepository subscriptionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
 
     @GetMapping("/{userId}")
     public ResponseEntity<?> getProfile(
@@ -45,6 +48,7 @@ public class UserController {
                                 .toString()
                 ));
     }
+
     @PutMapping("/{userId}")
     public ResponseEntity<?> updateProfile(
             @PathVariable Long userId,
@@ -84,6 +88,7 @@ public class UserController {
                         "email", user.getEmail()
                 ));
     }
+
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<Map<String, String>> deleteAccount(@PathVariable Long id) {
@@ -104,6 +109,7 @@ public class UserController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
     @PutMapping("/{userId}/change-password")
     public ResponseEntity<Map<String, String>> changePassword(
             @PathVariable Long userId,
@@ -128,6 +134,17 @@ public class UserController {
                     // Update the password
                     user.setPassword(passwordEncoder.encode(request.getNewPassword()));
                     userRepository.save(user);
+
+                    // Send notification email
+                    emailService.sendEmail(
+                            user.getEmail(),
+                            "SubTrack - Password Changed",
+                            "Hi " + user.getFirstName() + ",\n\n"
+                                    + "Your password was just changed.\n\n"
+                                    + "If you did not make this change, please reset your password immediately "
+                                    + "or contact support.\n\n"
+                                    + "– SubTrack Team"
+                    );
 
                     return ResponseEntity.ok(Map.of(
                             "message", "Password changed successfully"
