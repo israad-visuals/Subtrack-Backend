@@ -11,6 +11,8 @@ import com.subtrack.repository.PasswordResetTokenRepository;
 import com.subtrack.repository.SubscriptionRepository;
 import jakarta.transaction.Transactional;
 import java.util.Map;
+import com.subtrack.dto.ChangePasswordRequest;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
@@ -98,6 +100,37 @@ public class UserController {
 
                     return ResponseEntity.ok(Map.of(
                             "message", "Account and all associated data have been permanently deleted"
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+    @PutMapping("/{userId}/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @PathVariable Long userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        return userRepository.findById(userId)
+                .map(user -> {
+                    // Check if current password is correct
+                    if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                                "error", "Current password is incorrect"
+                        ));
+                    }
+
+                    // Check new password is different from current
+                    if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                                "error", "New password must be different from current password"
+                        ));
+                    }
+
+                    // Update the password
+                    user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+                    userRepository.save(user);
+
+                    return ResponseEntity.ok(Map.of(
+                            "message", "Password changed successfully"
                     ));
                 })
                 .orElse(ResponseEntity.notFound().build());
